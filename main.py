@@ -18,22 +18,27 @@ gc.collect()  # clean up mem after imports
 
 log = getLogger(__name__)
 
+SLEEP_TIME = 1000 * settings.SLEEP_INTERVAL
 
-def publish():
-    """Publish sensor and memory details to Seriesly."""
-    luminosity = sensors.light.get_data()
 
-    data = json_dump({
+def get_data():
+    """Get data to publish as a JSON string."""
+    return json_dump({
         'location': settings.LOCATION.lower(),
-        'luminosity': luminosity,
+        'luminosity': sensors.light.get_data(),
         'gc_mem_free': gc.mem_free(),
 
     })
 
-    resp = post(
-        settings.DB_URI,
-        data=data
-    )
+
+def publish(data):
+    """Publish sensor and memory details to Seriesly."""
+
+    with wifi.connection():
+        resp = post(
+            settings.DB_URI,
+            data=data
+        )
 
     status = resp.status_code
 
@@ -53,14 +58,13 @@ def publish():
 def execute():
     """Wake, connect to nwifi, publish details, and go back to sleep."""
     gc.collect()
-    wifi.connect()
-    publish()
+    publish(get_data())
 
 
 def sleep():
     rtc = machine.RTC()
     rtc.irq(trigger=rtc.ALARM0, wake=machine.DEEPSLEEP)
-    rtc.alarm(rtc.ALARM0, 1000 * settings.SLEEP_INTERVAL)
+    rtc.alarm(rtc.ALARM0, SLEEP_TIME)
     log.info('Sleeping for %s seconds', settings.SLEEP_INTERVAL)
     machine.deepsleep()
 

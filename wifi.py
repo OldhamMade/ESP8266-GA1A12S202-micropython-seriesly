@@ -1,3 +1,4 @@
+from esp import sleep_type as sleep, SLEEP_MODEM
 from network import WLAN, STA_IF
 from logging import getLogger
 
@@ -21,6 +22,20 @@ def connect():
         while not net.isconnected():
             pass
     status()
+
+
+class ConnectionContextManager(object):
+    """Context manager to a wifi connection to blocks."""
+
+    def __enter__(self):
+        return connect()
+
+    def __exit__(self, type, value, traceback):
+        sleep(SLEEP_MODEM)
+        return True
+
+
+connection = ConnectionContextManager
 
 
 def status():
